@@ -1,5 +1,6 @@
 # 🛡️ Real-Time Fraud Detection & Case Management System
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit%20Cloud-FF4B4B.svg?logo=streamlit&logoColor=white)](https://fraud-detection-financial-transactions-muskan.streamlit.app/)
 [![FraudShield CI](https://github.com/muskan5572/fraud-detection-financial-transactions/actions/workflows/ci.yml/badge.svg)](https://github.com/muskan5572/fraud-detection-financial-transactions/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -8,6 +9,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An end-to-end, enterprise-grade financial fraud surveillance platform built with Machine Learning, Streamlit, SQLite persistence, batch CSV scoring, real-time alert dispatchers, and a high-throughput REST API.
+
+---
+
+## 🌐 Live Interactive Demo
+🚀 **Explore the live platform:** [https://fraud-detection-financial-transactions-muskan.streamlit.app/](https://fraud-detection-financial-transactions-muskan.streamlit.app/)
 
 ---
 

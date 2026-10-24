@@ -40,6 +40,9 @@ I built FraudShield from scratch to bridge the gap between machine learning mode
 • 🌐 High-Performance REST API: Powered by Starlette & Uvicorn for sub-30ms real-time transaction scoring.
 • 🐳 Production Ready: Fully containerized with Docker & Docker Compose, tested with CI/CD via GitHub Actions.
 
+🌐 Live Interactive Demo:
+https://fraud-detection-financial-transactions-muskan.streamlit.app/
+
 💻 Check out the code and architecture on GitHub:
 https://github.com/muskan5572/fraud-detection-financial-transactions
 
