@@ -1,6 +1,6 @@
 """
-Fraud Detection Case Management Dashboard.
-Enterprise-grade Streamlit application for fraud analysts and risk teams.
+FraudShield: Enterprise Fraud Surveillance & Case Management Platform.
+Features real-time triage, batch file scoring, automated security alerts, and explainable AI.
 """
 
 from __future__ import annotations
@@ -30,12 +30,14 @@ from app.database import (
     record_action,
     submit_review,
 )
+from src.alerts import dispatch_fraud_alert
+from src.batch_scorer import generate_sample_batch_csv, process_batch_dataframe
 from src.explainability import get_feature_importances
 from src.predictor import score_transaction
 
 # Streamlit page setup
 st.set_page_config(
-    page_title="FraudShield | Case Management Dashboard",
+    page_title="FraudShield | Financial Crime Case Management",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -49,30 +51,18 @@ st.markdown(
         font-size: 2.1rem;
         font-weight: 700;
         color: #1e293b;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.1rem;
     }
     .sub-title {
         color: #64748b;
         font-size: 0.95rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.2rem;
     }
     .metric-card {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 16px;
-    }
-    .high-risk-badge {
-        color: #dc2626;
-        font-weight: 700;
-    }
-    .med-risk-badge {
-        color: #d97706;
-        font-weight: 600;
-    }
-    .low-risk-badge {
-        color: #16a34a;
-        font-weight: 600;
+        padding: 14px;
     }
     </style>
     """,
@@ -85,16 +75,18 @@ init_db()
 # Top Header
 st.markdown('<div class="main-title">🛡️ FraudShield Case Management Dashboard</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="sub-title">Real-Time Financial Transaction Surveillance & Explainable AI Case Triage</div>',
+    '<div class="sub-title">Real-Time Financial Transaction Surveillance, Batch Scoring & Incident Response</div>',
     unsafe_allow_html=True,
 )
 
 # Navigation Tabs
-tab_overview, tab_cases, tab_simulator, tab_model, tab_audit = st.tabs([
+tab_overview, tab_cases, tab_batch, tab_simulator, tab_alerts, tab_model, tab_audit = st.tabs([
     "📊 Executive Overview",
     "🔍 Case Review & Triage",
+    "📂 Batch CSV Scoring",
     "⚡ Real-Time Simulator",
-    "🧠 Model Performance & Explainability",
+    "🔔 Incident Alerts",
+    "🧠 Model Performance",
     "📜 Audit Log & Feedback",
 ])
 
@@ -136,7 +128,7 @@ with tab_overview:
                 color_discrete_map=color_map,
                 hole=0.45,
             )
-            fig_risk.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
+            fig_risk.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=290)
             st.plotly_chart(fig_risk, use_container_width=True)
 
         with c2:
@@ -151,7 +143,7 @@ with tab_overview:
                 color="Transactions",
                 color_continuous_scale="Blues",
             )
-            fig_cat.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300, showlegend=False)
+            fig_cat.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=290, showlegend=False)
             st.plotly_chart(fig_cat, use_container_width=True)
 
         st.markdown("##### 📈 Transaction Amount vs. Fraud Probability")
@@ -304,7 +296,72 @@ with tab_cases:
                     st.rerun()
 
 # ==========================================
-# TAB 3: REAL-TIME SIMULATOR
+# TAB 3: BATCH CSV SCORING (OPTION 4)
+# ==========================================
+with tab_batch:
+    st.markdown("### 📂 High-Throughput Batch Transaction Scoring")
+    st.write("Upload a batch of payment transactions in CSV format to compute fraud probabilities in bulk.")
+
+    b_left, b_right = st.columns([3, 1])
+
+    with b_left:
+        uploaded_file = st.file_uploader("Upload Transactions CSV", type=["csv"])
+
+    with b_right:
+        st.markdown("##### 📥 Sample Template")
+        sample_csv = generate_sample_batch_csv()
+        st.download_button(
+            label="Download Template CSV",
+            data=sample_csv,
+            file_name="sample_transactions_batch.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+    if uploaded_file is not None:
+        try:
+            batch_input_df = pd.read_csv(uploaded_file)
+            st.write(f"Loaded **{len(batch_input_df)}** transactions from `{uploaded_file.name}`:")
+            st.dataframe(batch_input_df.head(5), use_container_width=True)
+
+            if st.button("⚡ Run Bulk Risk Scoring Engine", type="primary"):
+                with st.spinner("Scoring batch transactions..."):
+                    scored_batch_df, batch_stats = process_batch_dataframe(batch_input_df)
+
+                st.success("Batch scoring complete!")
+
+                # Batch summary KPIs
+                bk1, bk2, bk3, bk4 = st.columns(4)
+                bk1.metric("Total Scored", f"{batch_stats['total_scored']:,}")
+                bk2.metric("High-Risk Count", f"{batch_stats['high_risk_count']:,}", delta=f"{batch_stats['high_risk_ratio']:.1%}")
+                bk3.metric("Avg Probability", f"{batch_stats['avg_probability']:.1%}")
+                bk4.metric("Flagged Volume", f"${batch_stats['total_flagged_amount']:,.2f}")
+
+                st.markdown("##### 📋 Scored Results")
+                st.dataframe(scored_batch_df, use_container_width=True)
+
+                c_dl1, c_dl2 = st.columns(2)
+                with c_dl1:
+                    csv_export = scored_batch_df.to_csv(index=False).encode("utf-8")
+                    st.download_button(
+                        label="📥 Download Scored Batch Results (CSV)",
+                        data=csv_export,
+                        file_name=f"scored_{uploaded_file.name}",
+                        mime="text/csv",
+                        use_container_width=True,
+                    )
+                with c_dl2:
+                    if st.button("💾 Persist Batch Records to Case Database", use_container_width=True):
+                        for _, r in scored_batch_df.iterrows():
+                            insert_transaction(r.to_dict())
+                        st.success("All batch records appended to the system database!")
+                        st.rerun()
+
+        except Exception as exc:
+            st.error(f"Error parsing batch CSV: {exc}")
+
+# ==========================================
+# TAB 4: REAL-TIME SIMULATOR
 # ==========================================
 with tab_simulator:
     st.markdown("### ⚡ Live Transaction Risk Scoring Simulator")
@@ -348,12 +405,59 @@ with tab_simulator:
         st.markdown("##### 🔍 Why was this scored this way?")
         st.info(score_res["explanation"])
 
-        if st.button("📥 Save Simulated Case to Database"):
-            new_id = insert_transaction(score_res)
-            st.success(f"Transaction successfully saved to database with ID #{new_id}!")
+        s1, s2 = st.columns(2)
+        with s1:
+            if st.button("📥 Save Simulated Case to Database", use_container_width=True):
+                new_id = insert_transaction(score_res)
+                st.success(f"Transaction successfully saved to database with ID #{new_id}!")
+
+        with s2:
+            if score_res["fraud_probability"] >= 0.70:
+                if st.button("🚨 Dispatch Multi-Channel Emergency Alert", type="primary", use_container_width=True):
+                    alert_info = dispatch_fraud_alert(score_res)
+                    st.success("Dispatched alert to SecOps queue & cardholder SMS!")
 
 # ==========================================
-# TAB 4: MODEL PERFORMANCE & EXPLAINABILITY
+# TAB 5: INCIDENT ALERTS (OPTION 5)
+# ==========================================
+with tab_alerts:
+    st.markdown("### 🔔 Incident Alert Dispatcher & Webhook Integrations")
+    st.write("Configure multi-channel security notifications for critical fraud occurrences.")
+
+    a_col1, a_col2 = st.columns([3, 2])
+
+    with a_col1:
+        st.markdown("##### ⚙️ Webhook Configuration")
+        webhook_input = st.text_input(
+            "Webhook Target URL (Slack / Discord / SecOps Endpoint)",
+            placeholder="https://hooks.slack.com/services/...",
+        )
+        alert_threshold = st.slider("Trigger Alert on Fraud Probability ≥", min_value=50, max_value=99, value=80, step=5)
+
+        st.markdown("##### 📢 Active Dispatch Channels")
+        st.checkbox("📱 Cardholder Emergency SMS Verification (+1 ***-***-8492)", value=True, disabled=True)
+        st.checkbox("✉️ SecOps Fraud Queue Email (<fraud-alerts@shield.bank>)", value=True, disabled=True)
+        st.checkbox("🔗 External Webhook / SIEM Integration", value=bool(webhook_input))
+
+    with a_col2:
+        st.markdown("##### 🧪 Test Alert Dispatcher")
+        st.write("Trigger a simulated tier-1 fraud incident notification:")
+        if st.button("🚨 Dispatch Test High-Risk Alert", type="primary", use_container_width=True):
+            test_tx = {
+                "transaction_id": 999901,
+                "amount": 4820.50,
+                "fraud_probability": 0.942,
+                "risk_level": "High Risk",
+                "card_type": "Discover Prepaid",
+                "device": "Linux Firefox",
+                "explanation": "Multiple high-value velocity breaches detected on an untrusted device footprint.",
+            }
+            alert_res = dispatch_fraud_alert(test_tx, webhook_url=webhook_input if webhook_input else None)
+            st.success("✅ Test incident alert successfully dispatched!")
+            st.json(alert_res)
+
+# ==========================================
+# TAB 6: MODEL PERFORMANCE & EXPLAINABILITY
 # ==========================================
 with tab_model:
     st.markdown("### 🧠 Model Performance & Feature Explainability")
@@ -387,7 +491,7 @@ with tab_model:
             st.image(str(cm_path), caption="Validation Confusion Matrix", use_container_width=True)
 
 # ==========================================
-# TAB 5: AUDIT LOG & FEEDBACK
+# TAB 7: AUDIT LOG & FEEDBACK
 # ==========================================
 with tab_audit:
     st.markdown("### 📜 Analyst Decisions & Audit History")

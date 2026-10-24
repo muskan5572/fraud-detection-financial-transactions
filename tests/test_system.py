@@ -12,6 +12,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import unittest
+import pandas as pd
 from app.database import (
     get_all_transactions,
     get_summary_metrics,
@@ -21,6 +22,8 @@ from app.database import (
     record_action,
     submit_review,
 )
+from src.alerts import dispatch_fraud_alert
+from src.batch_scorer import process_batch_dataframe
 from src.explainability import generate_explanation, get_feature_importances
 from src.predictor import score_transaction
 
@@ -83,6 +86,28 @@ class TestFraudDetectionSystem(unittest.TestCase):
         importances = get_feature_importances()
         self.assertIn("Transaction Amount (TransactionAmt)", importances)
         self.assertGreater(len(importances), 5)
+
+    def test_batch_scoring(self):
+        sample_batch = pd.DataFrame([
+            {"transaction_id": 8801, "amount": 3500.0, "card_type": "Discover Prepaid", "product_category": "Hotel/Travel (H)", "device": "Linux Firefox"},
+            {"transaction_id": 8802, "amount": 25.0, "card_type": "Visa Debit", "product_category": "Retail Checkout (C)", "device": "Windows Chrome"},
+        ])
+        results_df, stats = process_batch_dataframe(sample_batch)
+        self.assertEqual(len(results_df), 2)
+        self.assertEqual(stats["total_scored"], 2)
+        self.assertEqual(stats["high_risk_count"], 1)
+
+    def test_alert_dispatch(self):
+        tx = {
+            "transaction_id": 999123,
+            "amount": 2900.0,
+            "fraud_probability": 0.88,
+            "risk_level": "High Risk",
+            "explanation": "High velocity breach",
+        }
+        res = dispatch_fraud_alert(tx)
+        self.assertEqual(res["transaction_id"], 999123)
+        self.assertIn("SMS (Customer +1 ***-***-8492)", res["dispatched_channels"])
 
 
 if __name__ == "__main__":

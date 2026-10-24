@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fraudshield-dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+    volumes:
+      - shared-data:/app/outputs
+    depends_on:
+      - api
+    networks:
+      - fraud-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fraudshield-api
+    restart: unless-stopped
+    command: ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - shared-data:/app/outputs
+    networks:
+      - fraud-network
+
+volumes:
+  shared-data:
+    driver: local
+
+networks:
+  fraud-network:
+    driver: bridge
