@@ -1,6 +1,19 @@
-# Real-Time Fraud Detection & Case Management System
+# 🛡️ Real-Time Fraud Detection & Case Management System
 
-An end-to-end, enterprise-grade financial fraud detection platform built with Machine Learning, Streamlit, SQLite persistence, batch CSV scoring, real-time alert dispatchers, and a high-throughput REST API.
+[![FraudShield CI](https://github.com/muskan5572/fraud-detection-financial-transactions/actions/workflows/ci.yml/badge.svg)](https://github.com/muskan5572/fraud-detection-financial-transactions/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![ROC-AUC](https://img.shields.io/badge/ROC--AUC-89.90%25-success.svg)](https://scikit-learn.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+An end-to-end, enterprise-grade financial fraud surveillance platform built with Machine Learning, Streamlit, SQLite persistence, batch CSV scoring, real-time alert dispatchers, and a high-throughput REST API.
+
+---
+
+## 📑 Quick Links
+- **[Career & Interview Guide (SHOWCASE.md)](SHOWCASE.md)** — Resume bullet points, LinkedIn announcement post, and technical interview FAQ.
+- **[Cloud Deployment Guide (DEPLOYMENT.md)](DEPLOYMENT.md)** — Free 1-click deployment on Streamlit Cloud & Render.
 
 ---
 
@@ -14,6 +27,7 @@ An end-to-end, enterprise-grade financial fraud detection platform built with Ma
 - **Live Risk Scoring Simulator:** Test what-if payment scenarios and score custom transactions instantaneously.
 - **RESTful API Service:** High-performance Starlette/Uvicorn API serving real-time scoring, case retrieval, and security actions.
 - **Docker & Cloud Ready:** Containerized with `Dockerfile` and `docker-compose.yml`, ready for 1-click deployment to Streamlit Community Cloud and Render.
+- **CI/CD Pipeline:** Automated testing workflow configured with GitHub Actions.
 
 ---
 
@@ -21,6 +35,9 @@ An end-to-end, enterprise-grade financial fraud detection platform built with Ma
 
 ```
 fraud-detection-financial-transactions/
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # Automated GitHub Actions test workflow
 ├── app/
 │   ├── database.py             # SQLite persistence, seeding, case management & audit logging
 │   └── streamlit_app.py        # 7-tab enterprise analytics, triage & batch dashboard
@@ -44,6 +61,7 @@ fraud-detection-financial-transactions/
 ├── Dockerfile                  # Container definition for dashboard & API
 ├── docker-compose.yml          # Multi-container orchestration
 ├── DEPLOYMENT.md               # 1-click cloud deployment guide
+├── SHOWCASE.md                 # Resume bullet points & LinkedIn announcement
 ├── requirements.txt
 └── README.md
 ```
@@ -79,14 +97,6 @@ docker compose up -d --build
 ```powershell
 .\venv\Scripts\python.exe tests/test_system.py
 ```
-
----
-
-## ☁️ Free Cloud Deployment
-
-Refer to [`DEPLOYMENT.md`](DEPLOYMENT.md) for step-by-step guides on deploying:
-- **Streamlit Community Cloud:** 100% Free 1-click hosting directly from GitHub.
-- **Render / Hugging Face Spaces:** Free cloud container deployment.
 
 ---
 
