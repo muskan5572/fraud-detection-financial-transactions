@@ -300,65 +300,113 @@ with tab_cases:
 # ==========================================
 with tab_batch:
     st.markdown("### 📂 High-Throughput Batch Transaction Scoring")
-    st.write("Upload a batch of payment transactions in CSV format to compute fraud probabilities in bulk.")
+    st.write("Score payment transactions in bulk using your own CSV file or a built-in pre-loaded dataset.")
 
-    b_left, b_right = st.columns([3, 1])
+    # Data Source Selection
+    source_choice = st.radio(
+        "Choose Batch Data Source:",
+        ["📤 Upload Custom CSV File", "📁 Use Built-in Sample Dataset (500 records)", "📁 Use Extended Results Dataset (16,000 records)"],
+        horizontal=True,
+    )
 
-    with b_left:
-        uploaded_file = st.file_uploader("Upload Transactions CSV", type=["csv"])
+    batch_input_df = None
+    input_file_name = "transactions_batch.csv"
 
-    with b_right:
-        st.markdown("##### 📥 Sample Template")
-        sample_csv = generate_sample_batch_csv()
-        st.download_button(
-            label="Download Template CSV",
-            data=sample_csv,
-            file_name="sample_transactions_batch.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+    if source_choice == "📤 Upload Custom CSV File":
+        b_left, b_right = st.columns([3, 1])
 
-    if uploaded_file is not None:
-        try:
-            batch_input_df = pd.read_csv(uploaded_file)
-            st.write(f"Loaded **{len(batch_input_df)}** transactions from `{uploaded_file.name}`:")
-            st.dataframe(batch_input_df.head(5), use_container_width=True)
+        with b_left:
+            uploaded_file = st.file_uploader(
+                "Upload Transactions File (.csv, .txt, .tsv)",
+                type=["csv", "txt", "tsv"],
+                help="Accepts CSV or text files up to 250MB. If using Google Drive or OneDrive, make sure the file is downloaded to your device.",
+            )
 
-            if st.button("⚡ Run Bulk Risk Scoring Engine", type="primary"):
-                with st.spinner("Scoring batch transactions..."):
-                    scored_batch_df, batch_stats = process_batch_dataframe(batch_input_df)
+        with b_right:
+            st.markdown("##### 📥 Sample Template")
+            sample_csv = generate_sample_batch_csv()
+            st.download_button(
+                label="Download Template CSV",
+                data=sample_csv,
+                file_name="sample_transactions_batch.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
-                st.success("Batch scoring complete!")
+        if uploaded_file is not None:
+            input_file_name = uploaded_file.name
+            try:
+                # Robust multi-encoding read
+                try:
+                    batch_input_df = pd.read_csv(uploaded_file, encoding="utf-8")
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    batch_input_df = pd.read_csv(uploaded_file, encoding="latin1")
+            except Exception as exc:
+                st.error(f"⚠️ Error reading uploaded file: {exc}. Please verify it is a valid comma-separated CSV.")
 
-                # Batch summary KPIs
-                bk1, bk2, bk3, bk4 = st.columns(4)
-                bk1.metric("Total Scored", f"{batch_stats['total_scored']:,}")
-                bk2.metric("High-Risk Count", f"{batch_stats['high_risk_count']:,}", delta=f"{batch_stats['high_risk_ratio']:.1%}")
-                bk3.metric("Avg Probability", f"{batch_stats['avg_probability']:.1%}")
-                bk4.metric("Flagged Volume", f"${batch_stats['total_flagged_amount']:,.2f}")
+    elif source_choice == "📁 Use Built-in Sample Dataset (500 records)":
+        sample_path = ROOT_DIR / "data" / "sample_fraud_predictions.csv"
+        if not sample_path.exists():
+            sample_path = ROOT_DIR / "sample_fraud_predictions.csv"
+        if sample_path.exists():
+            batch_input_df = pd.read_csv(sample_path)
+            input_file_name = "sample_fraud_predictions.csv"
+            st.info(f"Loaded built-in dataset: `{sample_path.name}` ({len(batch_input_df)} records)")
 
-                st.markdown("##### 📋 Scored Results")
-                st.dataframe(scored_batch_df, use_container_width=True)
+    elif source_choice == "📁 Use Extended Results Dataset (16,000 records)":
+        ext_path = ROOT_DIR / "explainable_fraud_results.csv"
+        if ext_path.exists():
+            # Load first 1,000 records for fast responsive scoring
+            batch_input_df = pd.read_csv(ext_path, nrows=1000)
+            input_file_name = "extended_1000_subset.csv"
+            st.info(f"Loaded first 1,000 cases from `{ext_path.name}` for instant bulk scoring.")
 
-                c_dl1, c_dl2 = st.columns(2)
-                with c_dl1:
-                    csv_export = scored_batch_df.to_csv(index=False).encode("utf-8")
-                    st.download_button(
-                        label="📥 Download Scored Batch Results (CSV)",
-                        data=csv_export,
-                        file_name=f"scored_{uploaded_file.name}",
-                        mime="text/csv",
-                        use_container_width=True,
-                    )
-                with c_dl2:
-                    if st.button("💾 Persist Batch Records to Case Database", use_container_width=True):
-                        for _, r in scored_batch_df.iterrows():
-                            insert_transaction(r.to_dict())
-                        st.success("All batch records appended to the system database!")
-                        st.rerun()
+    # Display Preview & Scoring Engine
+    if batch_input_df is not None and not batch_input_df.empty:
+        st.write(f"Previewing first 5 rows of **{len(batch_input_df)}** transactions from `{input_file_name}`:")
+        st.dataframe(batch_input_df.head(5), use_container_width=True)
 
-        except Exception as exc:
-            st.error(f"Error parsing batch CSV: {exc}")
+        # Store in session state to prevent losing state on click
+        if st.button("⚡ Run Bulk Risk Scoring Engine", type="primary"):
+            with st.spinner("Scoring batch transactions..."):
+                scored_batch_df, batch_stats = process_batch_dataframe(batch_input_df)
+                st.session_state["scored_batch_df"] = scored_batch_df
+                st.session_state["batch_stats"] = batch_stats
+                st.session_state["batch_name"] = input_file_name
+
+        if "scored_batch_df" in st.session_state and st.session_state.get("batch_name") == input_file_name:
+            scored_batch_df = st.session_state["scored_batch_df"]
+            batch_stats = st.session_state["batch_stats"]
+
+            st.success("Batch scoring complete!")
+
+            # Batch summary KPIs
+            bk1, bk2, bk3, bk4 = st.columns(4)
+            bk1.metric("Total Scored", f"{batch_stats['total_scored']:,}")
+            bk2.metric("High-Risk Count", f"{batch_stats['high_risk_count']:,}", delta=f"{batch_stats['high_risk_ratio']:.1%}")
+            bk3.metric("Avg Probability", f"{batch_stats['avg_probability']:.1%}")
+            bk4.metric("Flagged Volume", f"${batch_stats['total_flagged_amount']:,.2f}")
+
+            st.markdown("##### 📋 Scored Results")
+            st.dataframe(scored_batch_df, use_container_width=True)
+
+            c_dl1, c_dl2 = st.columns(2)
+            with c_dl1:
+                csv_export = scored_batch_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="📥 Download Scored Batch Results (CSV)",
+                    data=csv_export,
+                    file_name=f"scored_{input_file_name}",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with c_dl2:
+                if st.button("💾 Persist Batch Records to Case Database", use_container_width=True):
+                    for _, r in scored_batch_df.iterrows():
+                        insert_transaction(r.to_dict())
+                    st.success("All batch records appended to the system database!")
+                    st.rerun()
 
 # ==========================================
 # TAB 4: REAL-TIME SIMULATOR
